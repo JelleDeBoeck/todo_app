@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $taskTitle = $_POST['new_task_title'];
         $deadline = $_POST['deadline'];
 
-        // Controleer of de deadline in het verleden ligt
         if (strtotime($deadline) < strtotime(date('Y-m-d'))) {
             $_SESSION['error'] = "De deadline kan niet in het verleden liggen.";
             header("Location: todo.php");
@@ -41,6 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 $listsStmt = $pdo->prepare("SELECT * FROM lists WHERE user_id = :user_id");
 $listsStmt->execute(['user_id' => $user_id]);
 $lists = $listsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$sortOrder = 'ASC';
+$sortBy = 'deadline';
+
+if (isset($_GET['sort']) && isset($_GET['type'])) {
+    $sortOrder = $_GET['sort'] === 'descending' ? 'DESC' : 'ASC';
+    $sortBy = in_array($_GET['type'], ['title', 'deadline']) ? $_GET['type'] : 'deadline';
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -80,7 +88,7 @@ $lists = $listsStmt->fetchAll(PDO::FETCH_ASSOC);
                             </button>
                         </div>
                     </div>
-                    
+
                     <div id="taskModal_<?php echo $list['id']; ?>" class="modal">
                         <div class="modal-content">
                             <span class="close" onclick="document.getElementById('taskModal_<?php echo $list['id']; ?>').style.display='none'">&times;</span>
@@ -94,9 +102,15 @@ $lists = $listsStmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
                     </div>
 
+                    <h4>Sorteer op:</h4>
+                    <a href="?sort=ascending&type=title">Titel oplopend</a> | 
+                    <a href="?sort=descending&type=title">Titel aflopend</a> | 
+                    <a href="?sort=ascending&type=deadline">Deadline oplopend</a> | 
+                    <a href="?sort=descending&type=deadline">Deadline aflopend</a>
+
                     <h4>Taken</h4>
                     <?php
-                    $tasksStmt = $pdo->prepare("SELECT * FROM tasks WHERE list_id = :list_id ORDER BY deadline ASC");
+                    $tasksStmt = $pdo->prepare("SELECT * FROM tasks WHERE list_id = :list_id ORDER BY $sortBy $sortOrder");
                     $tasksStmt->execute(['list_id' => $list['id']]);
                     $tasks = $tasksStmt->fetchAll(PDO::FETCH_ASSOC);
                     ?>
@@ -110,11 +124,10 @@ $lists = $listsStmt->fetchAll(PDO::FETCH_ASSOC);
                             <?php if ($task['deadline']): ?>
                                 <span>
                                     <?php
-                                    // Bereken het aantal resterende dagen
                                     $currentDate = new DateTime();
                                     $deadlineDate = new DateTime($task['deadline']);
                                     $interval = $currentDate->diff($deadlineDate);
-                                    $daysRemaining = $interval->format('%r%a'); // %r zorgt voor een negatief teken als de deadline in het verleden ligt
+                                    $daysRemaining = $interval->format('%r%a');
 
                                     if ($daysRemaining < 0) {
                                         echo "(Deadline verstreken: " . abs($daysRemaining) . " dagen geleden)";
