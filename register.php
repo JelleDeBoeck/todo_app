@@ -1,40 +1,23 @@
 <?php
-
 require 'db_config.php';
+require 'classes/User.php';
 
-if($_SERVER["REQUEST_METHOD"] == "POST") {
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $firstname = $_POST['firstname'];
     $lastname = $_POST['lastname'];
     $email = $_POST['email'];
     $password = $_POST['password'];
 
-    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+    $user = new User($pdo);
+    $result = $user->register($firstname, $lastname, $email, $password);
 
-    try {
-        $stmt = $pdo -> prepare("SELECT * FROM users WHERE email = :email");
-        $stmt -> execute(['email' => $email]);
-        if($stmt -> rowCount() > 0) {
-            echo "E-mailadres is al geregistreerd.";
-            exit;
-        }
-
-        $stmt = $pdo->prepare("INSERT INTO users (firstname, lastname, email, password) VALUES (:firstname, :lastname, :email, :password)");
-        $stmt->execute([
-            'firstname' => $firstname,
-            'lastname' => $lastname,
-            'email' => $email,
-            'password' => $hashedPassword
-        ]);
-
+    if ($result === true) {
         header("Location: login.php");
         exit;
-
-    } catch (PDOException $e) {
-        die("Er is een fout opgetreden: " . $e->getMessage());
+    } else {
+        echo $result;
     }
 }
-
-
 ?><!DOCTYPE html>
 <html lang="en">
 <head>

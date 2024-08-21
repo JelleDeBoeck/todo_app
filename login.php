@@ -1,34 +1,22 @@
 <?php
-
 require 'db_config.php';
+require 'classes/User.php';
 session_start();
 
-if($_SERVER["REQUEST_METHOD"] == "POST") {
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $password = $_POST['password'];
 
-    try {
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = :email");
-        $stmt->execute(['email' => $email]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $user = new User($pdo);
+    $result = $user->login($email, $password);
 
-        if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['firstname'] = $user['firstname'];
-            $_SESSION['lastname'] = $user['lastname'];
-
-            header("Location: todo.php");
-            exit;
-
-        } else {
-            echo "Ongeldig e-mailadres of wachtwoord.";
-    }
-
-    } catch (PDOException $e) {
-        die("Er is een fout opgetreden: " . $e->getMessage());
+    if ($result === true) {
+        header("Location: todo.php");
+        exit;
+    } else {
+        echo $result;
     }
 }
-
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
