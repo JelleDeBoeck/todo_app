@@ -29,12 +29,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
         }
 
-        $stmt = $pdo->prepare("INSERT INTO tasks (title, list_id, deadline) VALUES (:title, :list_id, :deadline)");
-        $stmt->execute(['title' => $taskTitle, 'list_id' => $listId, 'deadline' => $deadline]);
-    }
+        // Controleer op dubbele taken
+        $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE title = :title AND list_id = :list_id");
+        $checkStmt->execute(['title' => $taskTitle, 'list_id' => $listId]);
+        $taskExists = $checkStmt->fetchColumn() > 0;
 
-    header("Location: todo.php");
-    exit;
+        if ($taskExists) {
+            $_SESSION['error'] = "Deze taak bestaat al in de lijst.";
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO tasks (title, list_id, deadline) VALUES (:title, :list_id, :deadline)");
+            $stmt->execute(['title' => $taskTitle, 'list_id' => $listId, 'deadline' => $deadline]);
+        }
+
+        header("Location: todo.php");
+        exit;
+    }
 }
 
 $listsStmt = $pdo->prepare("SELECT * FROM lists WHERE user_id = :user_id");
@@ -57,7 +66,7 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo App</title>
-    <link rel="stylesheet" href="css/style-todo.css">
+    <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/boxicons/2.1.4/css/boxicons.min.css">
 </head>
 <body>
@@ -83,12 +92,8 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
                             <a href="delete_list.php?id=<?php echo $list['id']; ?>" onclick="return confirm('Weet je zeker dat je deze lijst wilt verwijderen?');" class="icon">
                                 <i class='bx bxs-trash'></i>
                             </a>
-                            <button onclick="document.getElementById('taskModal_<?php echo $list['id']; ?>').style.display='block'" class="add-task-button">
-                                <i class='bx bx-plus'></i>
-                            </button>
                         </div>
                     </div>
-
                     <div id="taskModal_<?php echo $list['id']; ?>" class="modal">
                         <div class="modal-content">
                             <span class="close" onclick="document.getElementById('taskModal_<?php echo $list['id']; ?>').style.display='none'">&times;</span>
@@ -108,7 +113,12 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
                     <a href="?sort=ascending&type=deadline">Deadline oplopend</a> | 
                     <a href="?sort=descending&type=deadline">Deadline aflopend</a>
 
-                    <h4>Taken</h4>
+                    <div class="list-header">
+                        <h2>Taken</h2>
+                        <button onclick="document.getElementById('taskModal_<?php echo $list['id']; ?>').style.display='block'" class="add-task-button">
+                            Toevoegen <i class='bx bx-plus'></i>
+                        </button>
+                    </div>
                     <?php
                     $tasksStmt = $pdo->prepare("SELECT * FROM tasks WHERE list_id = :list_id ORDER BY $sortBy $sortOrder");
                     $tasksStmt->execute(['list_id' => $list['id']]);
