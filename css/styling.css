@@ -1,4 +1,3 @@
-/* Algemene instellingen */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f0f4f8;
@@ -22,7 +21,6 @@ body {
     overflow-y: auto;
 }
 
-/* Typografie */
 h1 {
     color: #2c3e50;
     font-size: 2rem;
@@ -49,7 +47,6 @@ h4 {
     color: #7f8c8d;
 }
 
-/* Formulieren */
 form {
     margin-bottom: 20px;
 }
@@ -66,7 +63,6 @@ textarea {
     font-size: 1rem;
 }
 
-/* Buttons */
 button, .button {
     background-color: #3498db;
     color: #ffffff;
@@ -81,13 +77,11 @@ button, .button {
     transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-/* Hover state */
 button:hover, .button:hover {
     background-color: #2980b9;
     transform: translateY(-2px);
 }
 
-/* Specifieke button varianten */
 .add-task-button, .list-header button {
     width: auto;
     font-size: 14px;
@@ -110,7 +104,6 @@ button:hover, .button:hover {
     transform: scale(1.1);
 }
 
-/* Modale vensters */
 .modal {
     display: none;
     position: fixed;
@@ -158,7 +151,6 @@ button:hover, .button:hover {
     box-sizing: border-box;
 }
 
-/* Sluiten knop */
 .close {
     color: #999;
     float: right;
@@ -173,7 +165,6 @@ button:hover, .button:hover {
     text-decoration: none;
 }
 
-/* Lijsten en taken */
 .list, .task {
     border: 1px solid #dfe6e9;
     padding: 20px;
@@ -235,7 +226,6 @@ button:hover, .button:hover {
     color: #2980b9;
 }
 
-/* Commentaar sectie */
 .task-comments {
     margin-top: 10px;
 }
@@ -252,7 +242,6 @@ button:hover, .button:hover {
     color: #333;
 }
 
-/* Overige styling */
 .list-header {
     display: flex;
     align-items: center;
@@ -293,7 +282,6 @@ button:hover, .button:hover {
     color: #2980b9;
 }
 
-/* Extra stijlen voor taken en bestanden */
 .files-heading {
     display: flex;
     align-items: center;
@@ -365,4 +353,20 @@ button:hover, .button:hover {
     margin-bottom: 20px;
     padding-top: 10px;
     border-top: 1px solid rgb(192, 192, 196);
+}
+
+.file-info {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#delete-file-btn {
+    background: none;
+    margin-bottom: -26px;
+}
+
+.scrollable-container {
+    max-height: 600px; 
+    overflow-y: auto;
 }

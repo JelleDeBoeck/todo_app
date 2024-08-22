@@ -10,16 +10,39 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_file'])) {
+    $taskId = (int)$_POST['task_id'];
+    $fileName = htmlspecialchars($_POST['file_name'], ENT_QUOTES, 'UTF-8');
+
+    $stmt = $pdo->prepare("SELECT file_name FROM tasks WHERE id = :task_id");
+    $stmt->execute(['task_id' => $taskId]);
+    $currentFileName = $stmt->fetchColumn();
+
+    if ($currentFileName === $fileName) {
+        $filePath = 'uploads/' . $fileName;
+
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+
+        $stmt = $pdo->prepare("UPDATE tasks SET file_name = NULL WHERE id = :task_id");
+        $stmt->execute(['task_id' => $taskId]);
+    }
+
+    header("Location: todo.php");
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_list'])) {
-        $title = $_POST['new_list_title'];
+        $title = htmlspecialchars($_POST['new_list_title'], ENT_QUOTES, 'UTF-8');
         $stmt = $pdo->prepare("INSERT INTO lists (title, user_id) VALUES (:title, :user_id)");
         $stmt->execute(['title' => $title, 'user_id' => $user_id]);
     }
 
     if (isset($_POST['add_task'])) {
-        $listId = $_POST['list_id'];
-        $taskTitle = $_POST['new_task_title'];
+        $listId = (int)$_POST['list_id'];
+        $taskTitle = htmlspecialchars($_POST['new_task_title'], ENT_QUOTES, 'UTF-8');
         $deadline = $_POST['deadline'];
 
         if (strtotime($deadline) < strtotime(date('Y-m-d'))) {
@@ -44,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 ]);
             }
         } catch (PDOException $e) {
-            $_SESSION['error'] = "Er is een fout opgetreden bij het toevoegen van de taak: " . $e->getMessage();
+            $_SESSION['error'] = "Er is een fout opgetreden bij het toevoegen van de taak: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
         }
 
         header("Location: todo.php");
@@ -52,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if (isset($_POST['upload_file'])) {
-        $taskId = $_POST['task_id'];
+        $taskId = (int)$_POST['task_id'];
         $file = $_FILES['task_file'];
 
         try {
@@ -82,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $stmt->execute(['file_name' => $fileName, 'task_id' => $taskId]);
             }
         } catch (PDOException $e) {
-            $_SESSION['error'] = "Er is een fout opgetreden bij het uploaden van het bestand: " . $e->getMessage();
+            $_SESSION['error'] = "Er is een fout opgetreden bij het uploaden van het bestand: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
         }
 
         header("Location: todo.php");
@@ -90,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if (isset($_POST['comment']) && isset($_POST['task_id'])) {
-        $comment = $_POST['comment'];
-        $task_id = $_POST['task_id'];
+        $comment = htmlspecialchars($_POST['comment'], ENT_QUOTES, 'UTF-8');
+        $task_id = (int)$_POST['task_id'];
 
         try {
             $c = new Comment();
@@ -102,13 +125,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             echo json_encode([
                 'status' => 'success',
-                'body' => htmlspecialchars($c->getComment())
+                'body' => htmlspecialchars($c->getComment(), ENT_QUOTES, 'UTF-8')
             ]);
             exit;
         } catch (Exception $e) {
             echo json_encode([
                 'status' => 'error',
-                'message' => $e->getMessage()
+                'message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')
             ]);
             exit;
         }
@@ -143,7 +166,7 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
 
     <?php if (isset($_SESSION['error'])): ?>
         <div class="error-message">
-            <?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+            <?php echo htmlspecialchars($_SESSION['error'], ENT_QUOTES, 'UTF-8'); unset($_SESSION['error']); ?>
         </div>
     <?php endif; ?>
 
@@ -152,7 +175,7 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
         <button onclick="document.getElementById('addListModal').style.display='flex'">Toevoegen <i class="bx bx-plus"></i></button>
     </div>
 
-    <div id="lists">
+    <div id="lists" class="scrollable-container"> 
         <?php if (empty($lists)): ?>
             <div class="empty-state">
                 <p>Je hebt momenteel geen lijsten.</p>
@@ -161,19 +184,19 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
             <?php foreach ($lists as $list): ?>
                 <div class="list">
                     <div class="list-header">
-                        <h3><?php echo htmlspecialchars($list['title']); ?></h3>
+                        <h3><?php echo htmlspecialchars($list['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
                         <div class="list-actions">
-                            <a href="delete_list.php?id=<?php echo $list['id']; ?>" onclick="return confirm('Weet je zeker dat je deze lijst wilt verwijderen?');" class="icon">
+                            <a href="delete_list.php?id=<?php echo (int)$list['id']; ?>" onclick="return confirm('Weet je zeker dat je deze lijst wilt verwijderen?');" class="icon">
                                 <i class='bx bxs-trash'></i>
                             </a>
                         </div>
                     </div>
-                    <div id="taskModal_<?php echo $list['id']; ?>" class="modal">
+                    <div id="taskModal_<?php echo (int)$list['id']; ?>" class="modal">
                         <div class="modal-content">
-                            <span class="close" onclick="document.getElementById('taskModal_<?php echo $list['id']; ?>').style.display='none'">&times;</span>
-                            <h2>Voeg een taak toe aan lijst: <?php echo htmlspecialchars($list['title']); ?></h2>
+                            <span class="close" onclick="document.getElementById('taskModal_<?php echo (int)$list['id']; ?>').style.display='none'">&times;</span>
+                            <h2>Voeg een taak toe aan lijst: <?php echo htmlspecialchars($list['title'], ENT_QUOTES, 'UTF-8'); ?></h2>
                             <form method="POST" action="todo.php">
-                                <input type="hidden" name="list_id" value="<?php echo $list['id']; ?>">
+                                <input type="hidden" name="list_id" value="<?php echo (int)$list['id']; ?>">
                                 <input type="text" name="new_task_title" placeholder="Taak Titel" required>
                                 <input type="date" name="deadline" min="<?php echo date('Y-m-d'); ?>" required>
                                 <button type="submit" name="add_task">Toevoegen</button>
@@ -191,66 +214,70 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
 
                     <div class="list-header">
                         <h2>Taken</h2>
-                        <button onclick="document.getElementById('taskModal_<?php echo $list['id']; ?>').style.display='block'" class="add-task-button">
+                        <button onclick="document.getElementById('taskModal_<?php echo (int)$list['id']; ?>').style.display='block'" class="add-task-button">
                             Toevoegen <i class='bx bx-plus'></i>
                         </button>
                     </div>
                     <?php
                     $tasksStmt = $pdo->prepare("SELECT * FROM tasks WHERE list_id = :list_id ORDER BY $sortBy $sortOrder");
-                    $tasksStmt->execute(['list_id' => $list['id']]);
+                    $tasksStmt->execute(['list_id' => (int)$list['id']]);
                     $tasks = $tasksStmt->fetchAll(PDO::FETCH_ASSOC);
                     ?>
                     <div class="tasks-heading">
                     <?php foreach ($tasks as $task): ?>
                         <div class="task-item">
                             <div class="task-header">
-                            <span class="task-title"><?php echo htmlspecialchars($task['title']); ?></span>
-                            <?php if ($task['deadline']): ?>
-                                <span class="task-deadline">Deadline: <?php echo htmlspecialchars($task['deadline']); ?></span>
-                            <?php endif; ?>
-                            <a href="delete_task.php?id=<?php echo $task['id']; ?>" onclick="return confirm('Weet je zeker dat je deze taak wilt verwijderen?');" class="icon">
+                                <span class="task-title"><?php echo htmlspecialchars($task['title'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                <?php if ($task['deadline']): ?>
+                                    <span class="task-deadline">Deadline: <?php echo htmlspecialchars($task['deadline'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                <?php endif; ?>
+                                <a href="delete_task.php?id=<?php echo (int)$task['id']; ?>" onclick="return confirm('Weet je zeker dat je deze taak wilt verwijderen?');" class="icon">
                                     <i class='bx bxs-trash'></i>
                                 </a>
                             </div>
                             <div class="task-actions">
                                 <?php if ($task['file_name']): ?>
-                                    <a href="uploads/<?php echo htmlspecialchars($task['file_name']); ?>" target="_blank" class="icon">
-                                        <i class='bx bx-file'></i>
-                                    </a>
+                                    <div class="file-info">
+                                        <a href="uploads/<?php echo htmlspecialchars($task['file_name'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank">
+                                            <?php echo htmlspecialchars($task['file_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                        </a>
+                                        <form method="POST" action="todo.php" style="display:inline;">
+                                            <input type="hidden" name="task_id" value="<?php echo (int)$task['id']; ?>">
+                                            <input type="hidden" name="file_name" value="<?php echo htmlspecialchars($task['file_name'], ENT_QUOTES, 'UTF-8'); ?>">
+                                            <button id="delete-file-btn" type="submit" name="delete_file" onclick="return confirm('Weet je zeker dat je dit bestand wilt verwijderen?');"><i class='bx bxs-trash'></i></button>
+                                        </form>
+                                    </div>
                                 <?php endif; ?>
                                 
-                                <button id="file-btn" onclick="document.getElementById('uploadModal_<?php echo $task['id']; ?>').style.display='block'" class="icon">Bestand Uploaden
+                                <button id="file-btn" onclick="document.getElementById('uploadModal_<?php echo (int)$task['id']; ?>').style.display='block'" class="icon">Bestand Uploaden
                                     <i class='bx bx-upload'></i>
                                 </button>
-                                <button id="comment-btn" onclick="document.getElementById('commentModal_<?php echo $task['id']; ?>').style.display='block'" class="icon">Comment Toevoegen
+                                <button id="comment-btn" onclick="document.getElementById('commentModal_<?php echo (int)$task['id']; ?>').style.display='block'" class="icon">Comment Toevoegen
                                     <i class='bx bx-comment-add'></i>
                                 </button>
                             </div>
-                            <div id="uploadModal_<?php echo $task['id']; ?>" class="modal">
+                            <div id="uploadModal_<?php echo (int)$task['id']; ?>" class="modal">
                                 <div class="modal-content">
-                                    <span class="close" onclick="document.getElementById('uploadModal_<?php echo $task['id']; ?>').style.display='none'">&times;</span>
-                                    <h2>Upload bestand voor taak: <?php echo htmlspecialchars($task['title']); ?></h2>
+                                    <span class="close" onclick="document.getElementById('uploadModal_<?php echo (int)$task['id']; ?>').style.display='none'">&times;</span>
+                                    <h2>Upload een bestand voor taak: <?php echo htmlspecialchars($task['title'], ENT_QUOTES, 'UTF-8'); ?></h2>
                                     <form method="POST" action="todo.php" enctype="multipart/form-data">
-                                        <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
+                                        <input type="hidden" name="task_id" value="<?php echo (int)$task['id']; ?>">
                                         <input type="file" name="task_file" accept=".pdf, .docx" required>
                                         <button type="submit" name="upload_file">Uploaden</button>
                                     </form>
                                 </div>
                             </div>
-
-                            <div id="commentModal_<?php echo $task['id']; ?>" class="modal">
+                            <div id="commentModal_<?php echo (int)$task['id']; ?>" class="modal">
                                 <div class="modal-content">
-                                    <span class="close" onclick="document.getElementById('commentModal_<?php echo $task['id']; ?>').style.display='none'">&times;</span>
-                                    <h2>Voeg een opmerking toe aan taak: <?php echo htmlspecialchars($task['title']); ?></h2>
-                                    <textarea id="commentText_<?php echo $task['id']; ?>" placeholder="Voeg een opmerking toe..."></textarea>
-                                    <button id="btnAddComment_<?php echo $task['id']; ?>" data-task_id="<?php echo $task['id']; ?>">Voeg opmerking toe</button>
-                                    <ul class="comment_list_<?php echo $task['id']; ?>">
-                                        <?php
-                                        $comments = Comment::getAll($task['id']);
-                                        foreach ($comments as $comment): ?>
-                                            <li><?php echo htmlspecialchars($comment['comment']); ?></li>
-                                        <?php endforeach; ?>
-                                    </ul>
+                                    <span class="close" onclick="document.getElementById('commentModal_<?php echo (int)$task['id']; ?>').style.display='none'">&times;</span>
+                                    <h2>Voeg een comment toe aan taak: <?php echo htmlspecialchars($task['title'], ENT_QUOTES, 'UTF-8'); ?></h2>
+                                    <form id="commentForm_<?php echo (int)$task['id']; ?>" method="POST">
+                                        <input type="hidden" name="task_id" value="<?php echo (int)$task['id']; ?>">
+                                        <textarea name="comment" placeholder="Voeg je comment hier toe..." required></textarea>
+                                        <button type="submit">Toevoegen</button>
+                                    </form>
+                                    <div id="comments_<?php echo (int)$task['id']; ?>">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -272,8 +299,33 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
         </div>
     </div>
 
-</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('form[id^="commentForm_"]').forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    const taskId = formData.get('task_id');
 
-<script src="app.js"></script>
+                    fetch('todo.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const commentsDiv = document.getElementById('comments_' + taskId);
+                            const newComment = document.createElement('div');
+                            newComment.innerHTML = data.body;
+                            commentsDiv.appendChild(newComment);
+                        } else {
+                            alert('Er is een fout opgetreden: ' + data.message);
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+</div>
 </body>
 </html>
