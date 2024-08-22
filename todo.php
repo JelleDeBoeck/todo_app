@@ -14,8 +14,13 @@ $user_id = $_SESSION['user_id'];
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_list'])) {
         $title = $_POST['new_list_title'];
-        $stmt = $pdo->prepare("INSERT INTO lists (title, user_id) VALUES (:title, :user_id)");
-        $stmt->execute(['title' => $title, 'user_id' => $user_id]);
+
+        try {
+            $stmt = $pdo->prepare("INSERT INTO lists (title, user_id) VALUES (:title, :user_id)");
+            $stmt->execute(['title' => $title, 'user_id' => $user_id]);
+        } catch (PDOException $e) {
+            $_SESSION['error'] = "Er is een fout opgetreden bij het toevoegen van de lijst: " . $e->getMessage();
+        }
     }
 
     if (isset($_POST['add_task'])) {
@@ -29,16 +34,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
         }
 
-        // Controleer op dubbele taken
-        $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE title = :title AND list_id = :list_id");
-        $checkStmt->execute(['title' => $taskTitle, 'list_id' => $listId]);
-        $taskExists = $checkStmt->fetchColumn() > 0;
+        try {
+            $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE title = :title AND list_id = :list_id");
+            $checkStmt->execute(['title' => $taskTitle, 'list_id' => $listId]);
+            $taskExists = $checkStmt->fetchColumn() > 0;
 
-        if ($taskExists) {
-            $_SESSION['error'] = "Deze taak bestaat al in de lijst.";
-        } else {
-            $stmt = $pdo->prepare("INSERT INTO tasks (title, list_id, deadline) VALUES (:title, :list_id, :deadline)");
-            $stmt->execute(['title' => $taskTitle, 'list_id' => $listId, 'deadline' => $deadline]);
+            if ($taskExists) {
+                $_SESSION['error'] = "Deze taak bestaat al in de lijst.";
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO tasks (title, list_id, deadline) VALUES (:title, :list_id, :deadline)");
+                $stmt->execute(['title' => $taskTitle, 'list_id' => $listId, 'deadline' => $deadline]);
+            }
+        } catch (PDOException $e) {
+            $_SESSION['error'] = "Er is een fout opgetreden bij het toevoegen van de taak: " . $e->getMessage();
         }
 
         header("Location: todo.php");
@@ -57,7 +65,6 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
     $sortOrder = $_GET['sort'] === 'descending' ? 'DESC' : 'ASC';
     $sortBy = in_array($_GET['type'], ['title', 'deadline']) ? $_GET['type'] : 'deadline';
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -72,6 +79,13 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
 <body>
 <div class="container">
     <h1>Todo App</h1>
+
+    <?php if (isset($_SESSION['error'])): ?>
+        <div class="error-message">
+            <?php echo $_SESSION['error']; ?>
+            <?php unset($_SESSION['error']);?>
+        </div>
+    <?php endif; ?>
 
     <div class="list-header">
         <h2>Jouw Lijsten</h2>
