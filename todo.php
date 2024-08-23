@@ -226,15 +226,27 @@ if (isset($_GET['sort']) && isset($_GET['type'])) {
                     <div class="tasks-heading">
                     <?php foreach ($tasks as $task): ?>
                         <div class="task-item">
-                            <div class="task-header">
-                                <span class="task-title"><?php echo htmlspecialchars($task['title'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                <?php if ($task['deadline']): ?>
-                                    <span class="task-deadline">Deadline: <?php echo htmlspecialchars($task['deadline'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                <?php endif; ?>
-                                <a href="delete_task.php?id=<?php echo (int)$task['id']; ?>" onclick="return confirm('Weet je zeker dat je deze taak wilt verwijderen?');" class="icon">
-                                    <i class='bx bxs-trash'></i>
-                                </a>
-                            </div>
+                        <div class="task-header">
+                            <span class="task-title"><?php echo htmlspecialchars($task['title'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            <?php if ($task['deadline']): ?>
+                                <?php
+                                    $currentDate = new DateTime();
+                                    $deadlineDate = new DateTime($task['deadline']);
+                                    $remainingDays = $currentDate->diff($deadlineDate)->format('%r%a');
+                                ?>
+                                <span class="task-deadline">
+                                    Deadline: <?php echo htmlspecialchars($task['deadline'], ENT_QUOTES, 'UTF-8'); ?>
+                                    <?php if ($remainingDays >= 0): ?>
+                                        (<?php echo $remainingDays; ?> dagen resterend)
+                                    <?php else: ?>
+                                        (Verlopen)
+                                    <?php endif; ?>
+                                </span>
+                            <?php endif; ?>
+                            <a href="delete_task.php?id=<?php echo (int)$task['id']; ?>" onclick="return confirm('Weet je zeker dat je deze taak wilt verwijderen?');" class="icon">
+                                <i class='bx bxs-trash'></i>
+                            </a>
+                        </div>
                             <div class="task-actions">
                                 <?php if ($task['file_name']): ?>
                                     <div class="file-info">
